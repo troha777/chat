@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Написать мне</title>
+    <style>
+        body { font-family: Arial; text-align: center; padding: 40px; background: #f8f9fa; }
+        h1 { color: #343a40; }
+        textarea {
+            width: 80%;
+            height: 100px;
+            padding: 12px;
+            margin: 15px 0;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 12px 30px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #reply {
+            margin: 30px auto;
+            padding: 20px;
+            background: #d4edda;
+            border: 2px solid #28a745;
+            width: 80%;
+            border-radius: 8px;
+            display: none;
+        }
+        #text {
+            font-size: 18px;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <h1>📬 Напиши мне</h1>
+    <p>Я получу твоё сообщение и обязательно отвечу!</p>
+
+    <textarea id="msg" placeholder="Ваше сообщение..."></textarea><br>
+    <button onclick="send()">Отправить</button>
+
+    <div id="reply" style="display:none;">
+        <h3>✅ Ответ:</h3>
+        <p id="text"></p>
+    </div>
+
+    <script>
+        function send() {
+            const text = document.getElementById("msg").value.trim();
+            if (!text) {
+                alert("Напишите сообщение");
+                return;
+            }
+
+            const id = Date.now();
+            localStorage.setItem("last_msg_id", id.toString());
+
+            const message = {
+                id: id,
+                text: text,
+                time: new Date().toLocaleString(),
+                replied: false
+            };
+
+            const messages = JSON.parse(localStorage.getItem("messages") || "[]");
+            messages.push(message);
+            localStorage.setItem("messages", JSON.stringify(messages));
+
+            alert("Сообщение отправлено! Спасибо 💬");
+            document.getElementById("msg").value = "";
+            checkReply();
+        }
+
+        function checkReply() {
+            const id = localStorage.getItem("last_msg_id");
+            if (!id) return;
+
+            const messages = JSON.parse(localStorage.getItem("messages") || "[]");
+            const msg = messages.find(m => m.id == parseInt(id));
+
+            const replyDiv = document.getElementById("reply");
+            if (msg && msg.replied && msg.reply) {
+                document.getElementById("text").textContent = msg.reply;
+                replyDiv.style.display = "block";
+            }
+        }
+
+        setInterval(checkReply, 1000);
+        checkReply();
+    </script>
+</body>
+</html>

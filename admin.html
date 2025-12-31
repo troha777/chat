@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Админ: Сообщения</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 30px;
+            background: #f8f9fa;
+            margin: 0;
+        }
+        h1 {
+            color: #343e50;
+        }
+        .msg {
+            background: white;
+            border: 1px solid #ddd;
+            margin: 15px 0;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #218838;
+        }
+        .reply {
+            margin-left: 20px;
+            padding: 10px;
+            background: #e8f5e8;
+            border-left: 4px solid #28a745;
+            font-size: 16px;
+        }
+        .time {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        #login {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+        }
+        #login input {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px;
+            width: 200px;
+        }
+        #messages-container {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Форма входа -->
+    <div id="login">
+        <h2>🔐 Вход в админку</h2>
+        <p>Введите пароль для доступа</p>
+        <input type="password" id="password" placeholder="Пароль"><br>
+        <button onclick="checkPassword()">Войти</button>
+    </div>
+
+    <!-- Основной контент (скрыт) -->
+    <div id="messages-container" style="display:none;">
+        <h1>📬 Админ-панель</h1>
+        <p><strong>Сообщения пользователей:</strong></p>
+        <div id="list"></div>
+    </div>
+
+    <script>
+        // 🔐 Установи свой пароль здесь
+        const ADMIN_PASSWORD = "12345";  // ← Измени на свой
+
+        // Проверка пароля
+        function checkPassword() {
+            const input = document.getElementById("password").value;
+            if (input === ADMIN_PASSWORD) {
+                document.getElementById("login").style.display = "none";
+                document.getElementById("messages-container").style.display = "block";
+                loadMessages();
+            } else {
+                alert("❌ Неверный пароль!");
+            }
+        }
+
+        // Нажатие Enter в поле
+        document.getElementById("password").addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                checkPassword();
+            }
+        });
+
+        // Храним текст, который уже набрали
+        const typedReplies = {};
+
+        function loadMessages() {
+            const messages = JSON.parse(localStorage.getItem("messages") || "[]");
+            const container = document.getElementById("list");
+            container.innerHTML = "";
+
+            messages.forEach(msg => {
+                const msgId = msg.id;
+                const exists = document.getElementById(`msg-${msgId}`);
+
+                if (exists) {
+                    if (msg.replied && !exists.innerHTML.includes("Вы:")) {
+                        document.getElementById(`reply-${msgId}`).innerHTML = `<strong>📌 Вы:</strong> ${msg.reply}`;
+                    }
+                    return;
+                }
+
+                const div = document.createElement("div");
+                div.className = "msg";
+                div.id = `msg-${msgId}`;
+
+                let replySection = '';
+                if (!msg.replied) {
+                    const savedText = typedReplies[msgId] || '';
+                    replySection = `
+                        <div class="reply-box">
+                            <textarea id="reply_input_${msgId}" placeholder="Написать ответ...">${savedText}</textarea><br>
+                            <button onclick="sendReply(${msgId})">Ответить</button>
+                        </div>
+                    `;
+                } else {
+                    replySection = `
+                        <div class="reply" id="reply-${msgId}">
+                            <strong>📌 Вы:</strong> ${msg.reply}
+                        </div>
+                    `;
+                }
+
+                div.innerHTML = `
+                    <div><strong>💬</strong> ${msg.text}</div>
+                    <div class="time">🕒 ${msg.time}</div>
+                    ${replySection}
+                `;
+
+                container.appendChild(div);
+            });
+        }
+
+        function saveTyping(id) {
+            const input = document.getElementById(`reply_input_${id}`);
+            if (input) typedReplies[id] = input.value;
+        }
+
+        function sendReply(id) {
+            const input = document.getElementById(`reply_input_${id}`);
+            const text = input.value.trim();
+            if (!text) {
+                alert("Введите ответ");
+                return;
+            }
+
+            const messages = JSON.parse(localStorage.getItem("messages") || "[]");
+            const msg = messages.find(m => m.id === id);
+            if (msg) {
+                msg.replied = true;
+                msg.reply = text;
+                localStorage.setItem("messages", JSON.stringify(messages));
+                alert("Ответ отправлен!");
+                const replyBox = document.querySelector(`#msg-${id} .reply-box`);
+                if (replyBox) {
+                    replyBox.outerHTML = `<div class="reply" id="reply-${id}"><strong>📌 Вы:</strong> ${msg.reply}</div>`;
+                }
+            }
+            delete typedReplies[id];
+        }
+
+        window.addEventListener('input', (e) => {
+            const match = e.target.id.match(/reply_input_(\d+)/);
+            if (match) saveTyping(parseInt(match[1]));
+        });
+
+        setInterval(loadMessages, 10000);
+    </script>
+</body>
+</html>
