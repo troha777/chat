@@ -10,8 +10,21 @@
             background: #f8f9fa;
             margin: 0;
         }
-        h1 {
-            color: #343e50;
+        #login {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+        }
+        #login input {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px;
+            width: 200px;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
         }
         .msg {
             background: white;
@@ -28,40 +41,16 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             box-sizing: border-box;
-            font-size: 16px;
-        }
-        button {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        button:hover {
-            background: #218838;
         }
         .reply {
             margin-left: 20px;
             padding: 10px;
             background: #e8f5e8;
             border-left: 4px solid #28a745;
-            font-size: 16px;
         }
         .time {
             font-size: 0.9em;
             color: #6c757d;
-        }
-        #login {
-            text-align: center;
-            padding: 50px;
-            font-size: 18px;
-        }
-        #login input {
-            padding: 10px;
-            font-size: 16px;
-            margin: 10px;
-            width: 200px;
         }
         #messages-container {
             display: none;
@@ -72,23 +61,41 @@
     <!-- Форма входа -->
     <div id="login">
         <h2>🔐 Вход в админку</h2>
-        <p>Введите пароль для доступа</p>
+        <p>Введите пароль</p>
         <input type="password" id="password" placeholder="Пароль"><br>
         <button onclick="checkPassword()">Войти</button>
     </div>
 
-    <!-- Основной контент (скрыт) -->
+    <!-- Основной контент -->
     <div id="messages-container" style="display:none;">
         <h1>📬 Админ-панель</h1>
         <p><strong>Сообщения пользователей:</strong></p>
         <div id="list"></div>
     </div>
 
-    <script>
-        // 🔐 Установи свой пароль здесь
-        const ADMIN_PASSWORD = "12345";  // ← Измени на свой
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+        import { getDatabase, ref, onValue, update } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
 
-        // Проверка пароля
+        // Твой конфиг
+        const firebaseConfig = {
+            apiKey: "AIzaSyAC1f-AEPI7_EPPZoPo212qezJp_72QqQM",
+            authDomain: "chat-enternet.firebaseapp.com",
+            databaseURL: "https://chat-enternet-default-rtdb.firebaseio.com",
+            projectId: "chat-enternet",
+            storageBucket: "chat-enternet.firebasestorage.app",
+            messagingSenderId: "838607253492",
+            appId: "1:838607253492:web:3ad13610daab65251193a1"
+        };
+
+        // Инициализация
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase();
+
+        // 🔐 Пароль на админку
+        const ADMIN_PASSWORD = "trofim123";  // ← Измени на свой
+
         function checkPassword() {
             const input = document.getElementById("password").value;
             if (input === ADMIN_PASSWORD) {
@@ -100,69 +107,65 @@
             }
         }
 
-        // Нажатие Enter в поле
-        document.getElementById("password").addEventListener("keydown", function(e) {
-            if (e.key === "Enter") {
-                checkPassword();
-            }
+        document.getElementById("password").addEventListener("keydown", (e) => {
+            if (e.key === "Enter") checkPassword();
         });
 
-        // Храним текст, который уже набрали
         const typedReplies = {};
 
         function loadMessages() {
-            const messages = JSON.parse(localStorage.getItem("messages") || "[]");
-            const container = document.getElementById("list");
-            container.innerHTML = "";
+            const messagesRef = ref(db, 'messages');
+            onValue(messagesRef, (snapshot) => {
+                const container = document.getElementById("list");
+                container.innerHTML = "";
 
-            messages.forEach(msg => {
-                const msgId = msg.id;
-                const exists = document.getElementById(`msg-${msgId}`);
-
-                if (exists) {
-                    if (msg.replied && !exists.innerHTML.includes("Вы:")) {
-                        document.getElementById(`reply-${msgId}`).innerHTML = `<strong>📌 Вы:</strong> ${msg.reply}`;
-                    }
+                const messages = snapshot.val();
+                if (!messages) {
+                    container.innerHTML = "<p>Пока нет сообщений...</p>";
                     return;
                 }
 
-                const div = document.createElement("div");
-                div.className = "msg";
-                div.id = `msg-${msgId}`;
+                Object.values(messages).forEach(msg => {
+                    if (!msg.id) return;
 
-                let replySection = '';
-                if (!msg.replied) {
-                    const savedText = typedReplies[msgId] || '';
-                    replySection = `
-                        <div class="reply-box">
-                            <textarea id="reply_input_${msgId}" placeholder="Написать ответ...">${savedText}</textarea><br>
-                            <button onclick="sendReply(${msgId})">Ответить</button>
-                        </div>
+                    const div = document.createElement("div");
+                    div.className = "msg";
+                    div.id = `msg-${msg.id}`;
+
+                    let replySection = '';
+                    if (!msg.replied) {
+                        const savedText = typedReplies[msg.id] || '';
+                        replySection = `
+                            <div class="reply-box">
+                                <textarea id="reply_input_${msg.id}" placeholder="Написать ответ...">${savedText}</textarea><br>
+                                <button onclick="sendReply('${msg.id}')">Ответить</button>
+                            </div>
+                        `;
+                    } else {
+                        replySection = `
+                            <div class="reply">
+                                <strong>📌 Вы:</strong> ${msg.reply}
+                            </div>
+                        `;
+                    }
+
+                    div.innerHTML = `
+                        <div><strong>💬</strong> ${msg.text}</div>
+                        <div class="time">🕒 ${msg.time}</div>
+                        ${replySection}
                     `;
-                } else {
-                    replySection = `
-                        <div class="reply" id="reply-${msgId}">
-                            <strong>📌 Вы:</strong> ${msg.reply}
-                        </div>
-                    `;
-                }
 
-                div.innerHTML = `
-                    <div><strong>💬</strong> ${msg.text}</div>
-                    <div class="time">🕒 ${msg.time}</div>
-                    ${replySection}
-                `;
-
-                container.appendChild(div);
+                    container.appendChild(div);
+                });
             });
         }
 
-        function saveTyping(id) {
+        window.saveTyping = function(id) {
             const input = document.getElementById(`reply_input_${id}`);
             if (input) typedReplies[id] = input.value;
-        }
+        };
 
-        function sendReply(id) {
+        window.sendReply = function(id) {
             const input = document.getElementById(`reply_input_${id}`);
             const text = input.value.trim();
             if (!text) {
@@ -170,27 +173,22 @@
                 return;
             }
 
-            const messages = JSON.parse(localStorage.getItem("messages") || "[]");
-            const msg = messages.find(m => m.id === id);
-            if (msg) {
-                msg.replied = true;
-                msg.reply = text;
-                localStorage.setItem("messages", JSON.stringify(messages));
+            const messageRef = ref(db, 'messages/' + id);
+            update(messageRef, {
+                replied: true,
+                reply: text,
+                reply_time: new Date().toLocaleString()
+            }).then(() => {
                 alert("Ответ отправлен!");
-                const replyBox = document.querySelector(`#msg-${id} .reply-box`);
-                if (replyBox) {
-                    replyBox.outerHTML = `<div class="reply" id="reply-${id}"><strong>📌 Вы:</strong> ${msg.reply}</div>`;
-                }
-            }
-            delete typedReplies[id];
-        }
+                delete typedReplies[id];
+            });
+        };
 
-        window.addEventListener('input', (e) => {
-            const match = e.target.id.match(/reply_input_(\d+)/);
-            if (match) saveTyping(parseInt(match[1]));
+        // Автосохранение текста
+        document.addEventListener('input', (e) => {
+            const match = e.target.id?.match(/reply_input_(.+)/);
+            if (match) window.saveTyping(match[1]);
         });
-
-        setInterval(loadMessages, 10000);
     </script>
 </body>
 </html>
