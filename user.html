@@ -1,22 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <title>Написать мне</title>
     <style>
-        body { font-family: Arial; text-align: center; padding: 40px; background: #f8f9fa; }
-        h1 { color: #343a40; }
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 40px;
+            background: #f0f8ff;
+            margin: 0;
+        }
+        h1 {
+            color: #2c3e50;
+        }
         textarea {
             width: 80%;
             height: 100px;
             padding: 12px;
             margin: 15px 0;
-            border: 2px solid #007bff;
+            border: 2px solid #3498db;
             border-radius: 8px;
             font-size: 16px;
         }
         button {
-            background: #007bff;
+            background: #3498db;
             color: white;
             padding: 12px 30px;
             font-size: 18px;
@@ -25,7 +33,7 @@
             cursor: pointer;
         }
         button:hover {
-            background: #0056b3;
+            background: #2980b9;
         }
         #reply {
             margin: 30px auto;
@@ -47,23 +55,44 @@
     <p>Я получу твоё сообщение и обязательно отвечу!</p>
 
     <textarea id="msg" placeholder="Ваше сообщение..."></textarea><br>
-    <button onclick="send()">Отправить</button>
+    <button onclick="sendMessage()">Отправить</button>
 
     <div id="reply" style="display:none;">
         <h3>✅ Ответ:</h3>
         <p id="text"></p>
     </div>
 
-    <script>
-        function send() {
+    <!-- Подключение Firebase -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+        import { getDatabase, ref, push, onValue, update } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
+
+        // Твой конфиг
+        const firebaseConfig = {
+            apiKey: "AIzaSyAC1f-AEPI7_EPPZoPo212qezJp_72QqQM",
+            authDomain: "chat-enternet.firebaseapp.com",
+            databaseURL: "https://chat-enternet-default-rtdb.firebaseio.com",
+            projectId: "chat-enternet",
+            storageBucket: "chat-enternet.firebasestorage.app",
+            messagingSenderId: "838607253492",
+            appId: "1:838607253492:web:3ad13610daab65251193a1"
+        };
+
+        // Инициализация
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase();
+
+        // Отправка сообщения
+        window.sendMessage = function() {
             const text = document.getElementById("msg").value.trim();
             if (!text) {
                 alert("Напишите сообщение");
                 return;
             }
 
-            const id = Date.now();
-            localStorage.setItem("last_msg_id", id.toString());
+            const messagesRef = ref(db, 'messages');
+            const newMessageRef = push(messagesRef);
+            const id = newMessageRef.key;
 
             const message = {
                 id: id,
@@ -72,31 +101,32 @@
                 replied: false
             };
 
-            const messages = JSON.parse(localStorage.getItem("messages") || "[]");
-            messages.push(message);
-            localStorage.setItem("messages", JSON.stringify(messages));
+            update(newMessageRef, message).then(() => {
+                alert("Сообщение отправлено! 💬");
+                document.getElementById("msg").value = "";
+                checkForReply(id);
+                startReplyCheck(id);
+            });
+        };
 
-            alert("Сообщение отправлено! Спасибо 💬");
-            document.getElementById("msg").value = "";
-            checkReply();
+        let replyCheckInterval;
+
+        function startReplyCheck(id) {
+            if (replyCheckInterval) clearInterval(replyCheckInterval);
+            replyCheckInterval = setInterval(() => checkForReply(id), 2000);
         }
 
-        function checkReply() {
-            const id = localStorage.getItem("last_msg_id");
-            if (!id) return;
-
-            const messages = JSON.parse(localStorage.getItem("messages") || "[]");
-            const msg = messages.find(m => m.id == parseInt(id));
-
-            const replyDiv = document.getElementById("reply");
-            if (msg && msg.replied && msg.reply) {
-                document.getElementById("text").textContent = msg.reply;
-                replyDiv.style.display = "block";
-            }
+        function checkForReply(id) {
+            const messageRef = ref(db, 'messages/' + id);
+            onValue(messageRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data && data.replied && data.reply) {
+                    document.getElementById("text").textContent = data.reply;
+                    document.getElementById("reply").style.display = "block";
+                    if (replyCheckInterval) clearInterval(replyCheckInterval);
+                }
+            }, { onlyOnce: false });
         }
-
-        setInterval(checkReply, 1000);
-        checkReply();
     </script>
 </body>
 </html>
