@@ -54,7 +54,6 @@
             padding: 10px;
             background: #e8f5e8;
             border-left: 4px solid #34a853;
-            font-size: 16px;
         }
         .time {
             font-size: 0.9em;
@@ -66,6 +65,10 @@
             gap: 8px;
             flex-wrap: wrap;
         }
+        .empty {
+            color: #888;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -74,36 +77,39 @@
     <div id="list"></div>
 
     <script>
-        // Для сохранения текста, пока печатаешь
         const typedReplies = {};
 
-        // Загружаем и отображаем все сообщения
         function loadMessages() {
             const container = document.getElementById("list");
-            container.innerHTML = ""; // Очищаем
+            container.innerHTML = "";
 
             let messages = [];
             try {
                 const data = localStorage.getItem("messages");
-                if (data) {
-                    messages = JSON.parse(data);
-                }
+                messages = data ? JSON.parse(data) : [];
             } catch (e) {
-                console.error("Ошибка чтения messages:", e);
+                console.error("Ошибка парсинга messages:", e);
                 messages = [];
+            }
+
+            // Сортировка: новые — сверху
+            messages.sort((a, b) => b.id - a.id);
+
+            if (messages.length === 0) {
+                container.innerHTML = '<p class="empty">Пока нет сообщений...</p>';
+                return;
             }
 
             messages.forEach(msg => {
                 if (!msg.id || !msg.text) return;
 
-                const msgId = parseInt(msg.id);
+                const msgId = msg.id;
                 const div = document.createElement("div");
                 div.className = "msg";
                 div.id = `msg-${msgId}`;
 
                 let replySection = '';
 
-                // Если ещё не ответил
                 if (!msg.replied) {
                     const savedText = typedReplies[msgId] || '';
                     replySection = `
@@ -119,10 +125,9 @@
                         </div>
                     `;
                 } else {
-                    // Уже ответил
                     replySection = `
                         <div class="reply" id="reply-${msgId}">
-                            <strong>📌 Вы:</strong> ${msg.reply || ''}
+                            <strong>📌 Вы:</strong> ${msg.reply || '[пусто]'}
                         </div>
                         <div class="controls">
                             <button class="delete-btn" onclick="deleteMessage(${msgId})">Удалить</button>
@@ -138,21 +143,13 @@
 
                 container.appendChild(div);
             });
-
-            if (messages.length === 0) {
-                container.innerHTML = "<p>Пока нет сообщений...</p>";
-            }
         }
 
-        // Сохраняем текст, пока печатаем
         function saveTyping(id) {
             const input = document.getElementById(`reply_input_${id}`);
-            if (input) {
-                typedReplies[id] = input.value;
-            }
+            if (input) typedReplies[id] = input.value;
         }
 
-        // Отправка ответа
         function sendReply(id) {
             const input = document.getElementById(`reply_input_${id}`);
             if (!input) return;
@@ -171,7 +168,7 @@
                 messages = [];
             }
 
-            const msg = messages.find(m => m.id == id);  // == чтобы работало с string/number
+            const msg = messages.find(m => m.id == id);
             if (msg) {
                 msg.replied = true;
                 msg.reply = text;
@@ -181,12 +178,13 @@
                     alert("Ответ отправлен!");
                     delete typedReplies[id];
                 } catch (e) {
-                    alert("Не удалось сохранить ответ");
+                    alert("Ошибка сохранения");
                     console.error(e);
+                    return;
                 }
             }
 
-            // Обновляем интерфейс
+            // Обновляем UI
             const replyBox = document.querySelector(`#msg-${id} .reply-box`);
             if (replyBox) {
                 replyBox.outerHTML = `
@@ -200,7 +198,6 @@
             }
         }
 
-        // Удаление сообщения
         function deleteMessage(id) {
             if (!confirm("Вы уверены, что хотите удалить это сообщение?")) {
                 return;
@@ -214,42 +211,35 @@
                 messages = [];
             }
 
-            const msgId = parseInt(id);
-
-            // Фильтруем — оставляем только те, у кого id не совпадает
-            const filtered = messages.filter(m => {
-                return parseInt(m.id) !== msgId;
-            });
+            const filtered = messages.filter(m => m.id != id);
 
             try {
                 localStorage.setItem("messages", JSON.stringify(filtered));
-                console.log("Сообщение удалено:", msgId);
             } catch (e) {
-                alert("Ошибка сохранения после удаления");
+                alert("Ошибка при удалении");
                 console.error(e);
                 return;
             }
 
-            // Удаляем из интерфейса
-            const element = document.getElementById(`msg-${msgId}`);
-            if (element) {
-                element.remove();
+            const element = document.getElementById(`msg-${id}`);
+            if (element) element.remove();
+
+            if (filtered.length === 0) {
+                document.getElementById("list").innerHTML = '<p class="empty">Пока нет сообщений...</p>';
             }
 
             alert("Сообщение удалено");
         }
 
-        // Слушаем ввод текста
+        // Автосохранение текста
         window.addEventListener('input', (e) => {
             const match = e.target.id?.match(/reply_input_(\d+)/);
-            if (match) {
-                saveTyping(parseInt(match[1]));
-            }
+            if (match) saveTyping(parseInt(match[1]));
         });
 
         // Обновляем каждые 10 секунд
         setInterval(loadMessages, 10000);
-        loadMessages(); // Первый раз сразу
+        loadMessages(); // сразу
     </script>
 </body>
 </html>
