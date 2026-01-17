@@ -2,60 +2,56 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>📬 Чат</title>
+    <title>📬 Чат с Трофимом</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
             padding: 20px; 
             margin: 0; 
-            background: #f1f3f5; 
+            background: #f8f9fa; 
+            color: #333;
         }
-        h1 { color: #1a73e8; text-align: center; }
         .container { max-width: 800px; margin: 0 auto; }
 
-        /* Пользователь */
-        #user-mode { text-align: center; }
+        h1 { text-align: center; color: #1a73e8; }
         textarea {
             width: 90%;
-            height: 120px;
+            height: 100px;
             padding: 12px;
             border: 2px solid #4285f4;
-            border-radius: 10px;
+            border-radius: 8px;
             font-size: 16px;
+            margin: 10px 0;
         }
         button {
-            margin: 10px;
-            padding: 12px 24px;
+            padding: 10px 20px;
+            margin: 5px;
             font-size: 16px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
         }
-        .blue { background: #4285f4; color: white; }
-        .red { background: #ea4335; color: white; }
+        .btn-blue { background: #4285f4; color: white; }
+        .btn-red { background: #ea4335; color: white; }
+        .btn-green { background: #34a853; color: white; }
 
-        /* Админ */
-        .msg {
+        #user-mode, #admin-mode, #login-form {
+            text-align: center;
+            padding: 20px;
             background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+        #admin-mode, #login-form { display: none; }
+
+        .msg {
+            background: #f1f3f5;
             border: 1px solid #ddd;
             margin: 15px 0;
-            padding: 18px;
-            border-radius: 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .reply-area {
-            margin-top: 10px;
-        }
-        .reply-text {
-            width: 100%;
-            padding: 10px;
-            margin: 5px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        .time {
-            font-size: 0.9em;
-            color: #666;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: left;
         }
         .reply-box {
             background: #e8f5e8;
@@ -63,43 +59,70 @@
             padding: 10px;
             margin: 10px 0;
         }
-        #admin-mode { display: none; }
-        #login-form { text-align: center; margin: 40px; }
+        .reply-input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .time {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        #reply-section {
+            display: none;
+            margin: 30px auto;
+            padding: 20px;
+            background: #e8f5e8;
+            border: 2px solid #34a853;
+            border-radius: 10px;
+            width: 90%;
+            color: #1b5e20;
+            text-align: left;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📬 Чат с Мурзиком</h1>
+        <h1>📬 Напиши мне</h1>
 
         <!-- Режим: Пользователь -->
         <div id="user-mode">
-            <h2>Напиши мне</h2>
+            <h2>Расскажи, что у тебя?</h2>
             <textarea id="msg" placeholder="Твоё сообщение..."></textarea><br>
-            <button class="blue" onclick="send()">Отправить</button>
-            <p><button class="red" onclick="switchToAdmin()">Я — админ</button></p>
+            <button class="btn-blue" onclick="send()">Отправить</button>
+            <p><button class="btn-red" onclick="switchToAdmin()">Я — админ</button></p>
+
+            <!-- Ответ от админа -->
+            <div id="reply-section">
+                <h3>📌 Ответ:</h3>
+                <p id="reply-text"></p>
+            </div>
         </div>
 
-        <!-- Форма входа админа -->
-        <div id="login-form" style="display:none;">
+        <!-- Вход админа -->
+        <div id="login-form">
             <h2>🔐 Вход в админку</h2>
-            <input type="password" id="admin-pass" placeholder="Пароль"><br>
-            <button class="blue" onclick="login()">Войти</button>
-            <p><button class="red" onclick="backToUser()">← Назад</button></p>
+            <input type="password" id="admin-pass" placeholder="Пароль"><br><br>
+            <button class="btn-blue" onclick="login()">Войти</button><br>
+            <button class="btn-red" onclick="backToUser()">← Назад</button>
         </div>
 
         <!-- Режим: Админ -->
         <div id="admin-mode">
-            <h2>📬 Сообщения</h2>
+            <h2>📬 Сообщения пользователей</h2>
             <div id="list"></div>
-            <p><button class="red" onclick="backToUser()">← Назад</button></p>
+            <p><button class="btn-red" onclick="backToUser()">← Назад</button></p>
         </div>
     </div>
 
     <script>
-        const PASSWORD = "trofim123"; // ← измени на свой
+        const ADMIN_PASSWORD = "trofim424004";
         let messages = [];
 
-        // === Загружаем сообщения ===
+        // === Загрузка ===
         function load() {
             try {
                 const data = localStorage.getItem("messages");
@@ -110,18 +133,18 @@
             }
         }
 
-        // === Сохраняем ===
+        // === Сохранение ===
         function save() {
             try {
                 localStorage.setItem("messages", JSON.stringify(messages));
                 return true;
             } catch (e) {
-                alert("Ошибка: не удалось сохранить.");
+                console.error("Ошибка сохранения:", e);
                 return false;
             }
         }
 
-        // === Отправка ===
+        // === Отправка сообщения ===
         function send() {
             const text = document.getElementById("msg").value.trim();
             if (!text) {
@@ -130,8 +153,9 @@
             }
 
             load();
+            const id = Date.now();
             messages.push({
-                id: Date.now(),
+                id: id,
                 text: text,
                 time: new Date().toLocaleString("ru-RU"),
                 replied: false
@@ -139,10 +163,35 @@
             save();
 
             document.getElementById("msg").value = "";
-            alert("Сообщение отправлено!");
+            document.getElementById("status").textContent = "✅ Отправлено!";
+
+            // Проверяем, пришёл ли ответ
+            checkForReply(id);
         }
 
-        // === Админ: вход ===
+        // === Проверка ответа (каждые 5 секунд) ===
+        function checkForReply(id) {
+            const interval = setInterval(() => {
+                load();
+                const msg = messages.find(m => m.id == id);
+                if (msg && msg.replied && msg.reply) {
+                    document.getElementById("reply-text").textContent = msg.reply;
+                    document.getElementById("reply-section").style.display = "block";
+                    clearInterval(interval);
+                }
+            }, 5000);
+        }
+
+        // === При загрузке: проверим последнее сообщение ===
+        window.onload = function () {
+            load();
+            const lastMsg = messages[messages.length - 1];
+            if (lastMsg && lastMsg.id) {
+                checkForReply(lastMsg.id);
+            }
+        };
+
+        // === Режим админа ===
         function switchToAdmin() {
             document.getElementById("user-mode").style.display = "none";
             document.getElementById("login-form").style.display = "block";
@@ -156,7 +205,7 @@
 
         function login() {
             const input = document.getElementById("admin-pass").value;
-            if (input === PASSWORD) {
+            if (input === ADMIN_PASSWORD) {
                 document.getElementById("login-form").style.display = "none";
                 document.getElementById("admin-mode").style.display = "block";
                 loadAdmin();
@@ -165,7 +214,7 @@
             }
         }
 
-        // === Отображение сообщений для админа ===
+        // === Отображение сообщений в админке ===
         function loadAdmin() {
             load();
             const container = document.getElementById("list");
@@ -196,9 +245,9 @@
                 } else {
                     content += `
                         <div class="reply-area">
-                            <textarea class="reply-text" id="reply_${msg.id}" placeholder="Ответ..."></textarea>
-                            <button class="blue" onclick="reply(${msg.id})">Ответить</button>
-                            <button class="red" onclick="deleteMsg(${msg.id})">Удалить</button>
+                            <textarea class="reply-input" id="reply_${msg.id}" placeholder="Ответ..."></textarea>
+                            <button class="btn-green" onclick="reply(${msg.id})">Ответить</button>
+                            <button class="btn-red" onclick="deleteMsg(${msg.id})">Удалить</button>
                         </div>
                     `;
                 }
@@ -208,7 +257,7 @@
             });
         }
 
-        // === Ответ ===
+        // === Ответить ===
         function reply(id) {
             const input = document.getElementById(`reply_${id}`);
             const text = input.value.trim();
@@ -225,10 +274,10 @@
                 save();
             }
 
-            loadAdmin(); // обновляем
+            loadAdmin(); // обновить
         }
 
-        // === Удаление ===
+        // === Удалить ===
         function deleteMsg(id) {
             if (!confirm("Удалить сообщение?")) return;
 
@@ -236,19 +285,15 @@
             messages = messages.filter(m => m.id != id);
             save();
 
-            loadAdmin(); // обновляем
+            loadAdmin();
         }
 
-        // Обновляем админку каждые 5 секунд
+        // === Автообновление админки ===
         setInterval(() => {
             if (document.getElementById("admin-mode").style.display === "block") {
                 loadAdmin();
             }
         }, 5000);
-
-        // Первая загрузка
-        load();
-
     </script>
 </body>
 </html>
