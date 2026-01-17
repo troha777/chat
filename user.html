@@ -2,89 +2,253 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Написать мне</title>
+    <title>📬 Чат</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 40px;
-            background: #f9f9f9;
-            margin: 0;
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            margin: 0; 
+            background: #f1f3f5; 
         }
-        h1 {
-            color: #333;
-        }
+        h1 { color: #1a73e8; text-align: center; }
+        .container { max-width: 800px; margin: 0 auto; }
+
+        /* Пользователь */
+        #user-mode { text-align: center; }
         textarea {
-            width: 80%;
+            width: 90%;
             height: 120px;
             padding: 12px;
-            margin: 15px 0;
             border: 2px solid #4285f4;
             border-radius: 10px;
             font-size: 16px;
-            font-family: inherit;
         }
         button {
-            background: #4285f4;
-            color: white;
-            padding: 12px 30px;
-            font-size: 18px;
+            margin: 10px;
+            padding: 12px 24px;
+            font-size: 16px;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
         }
-        button:hover {
-            background: #3367d6;
+        .blue { background: #4285f4; color: white; }
+        .red { background: #ea4335; color: white; }
+
+        /* Админ */
+        .msg {
+            background: white;
+            border: 1px solid #ddd;
+            margin: 15px 0;
+            padding: 18px;
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
-        #status {
-            margin-top: 20px;
-            font-size: 16px;
-            color: #333;
-            display: none;
+        .reply-area {
+            margin-top: 10px;
         }
+        .reply-text {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .time {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .reply-box {
+            background: #e8f5e8;
+            border-left: 4px solid #34a853;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        #admin-mode { display: none; }
+        #login-form { text-align: center; margin: 40px; }
     </style>
 </head>
 <body>
-    <h1>📬 Напиши мне</h1>
-    <p>Я отвечу как можно скорее!</p>
-    <textarea id="msg" placeholder="Твоё сообщение..."></textarea><br>
-    <button onclick="sendMessage()">Отправить</button>
-    <div id="status">✅ Сообщение отправлено!</div>
+    <div class="container">
+        <h1>📬 Чат с Мурзиком</h1>
+
+        <!-- Режим: Пользователь -->
+        <div id="user-mode">
+            <h2>Напиши мне</h2>
+            <textarea id="msg" placeholder="Твоё сообщение..."></textarea><br>
+            <button class="blue" onclick="send()">Отправить</button>
+            <p><button class="red" onclick="switchToAdmin()">Я — админ</button></p>
+        </div>
+
+        <!-- Форма входа админа -->
+        <div id="login-form" style="display:none;">
+            <h2>🔐 Вход в админку</h2>
+            <input type="password" id="admin-pass" placeholder="Пароль"><br>
+            <button class="blue" onclick="login()">Войти</button>
+            <p><button class="red" onclick="backToUser()">← Назад</button></p>
+        </div>
+
+        <!-- Режим: Админ -->
+        <div id="admin-mode">
+            <h2>📬 Сообщения</h2>
+            <div id="list"></div>
+            <p><button class="red" onclick="backToUser()">← Назад</button></p>
+        </div>
+    </div>
 
     <script>
-        function sendMessage() {
+        const PASSWORD = "trofim123"; // ← измени на свой
+        let messages = [];
+
+        // === Загружаем сообщения ===
+        function load() {
+            try {
+                const data = localStorage.getItem("messages");
+                messages = data ? JSON.parse(data) : [];
+            } catch (e) {
+                messages = [];
+                localStorage.setItem("messages", "[]");
+            }
+        }
+
+        // === Сохраняем ===
+        function save() {
+            try {
+                localStorage.setItem("messages", JSON.stringify(messages));
+                return true;
+            } catch (e) {
+                alert("Ошибка: не удалось сохранить.");
+                return false;
+            }
+        }
+
+        // === Отправка ===
+        function send() {
             const text = document.getElementById("msg").value.trim();
             if (!text) {
                 alert("Напишите что-нибудь!");
                 return;
             }
 
-            try {
-                const messages = JSON.parse(localStorage.getItem("messages") || "[]");
-                const newMessage = {
-                    id: Date.now(), // уникальный ID
-                    text: text,
-                    time: new Date().toLocaleString("ru-RU"),
-                    replied: false
-                };
+            load();
+            messages.push({
+                id: Date.now(),
+                text: text,
+                time: new Date().toLocaleString("ru-RU"),
+                replied: false
+            });
+            save();
 
-                messages.push(newMessage);
-                localStorage.setItem("messages", JSON.stringify(messages));
+            document.getElementById("msg").value = "";
+            alert("Сообщение отправлено!");
+        }
 
-                // Показываем статус
-                document.getElementById("status").style.display = "block";
-                document.getElementById("msg").value = "";
+        // === Админ: вход ===
+        function switchToAdmin() {
+            document.getElementById("user-mode").style.display = "none";
+            document.getElementById("login-form").style.display = "block";
+        }
 
-                // Скрываем через 3 секунды
-                setTimeout(() => {
-                    document.getElementById("status").style.display = "none";
-                }, 3000);
+        function backToUser() {
+            document.getElementById("login-form").style.display = "none";
+            document.getElementById("admin-mode").style.display = "none";
+            document.getElementById("user-mode").style.display = "block";
+        }
 
-            } catch (e) {
-                alert("Ошибка: не удалось сохранить сообщение.");
-                console.error(e);
+        function login() {
+            const input = document.getElementById("admin-pass").value;
+            if (input === PASSWORD) {
+                document.getElementById("login-form").style.display = "none";
+                document.getElementById("admin-mode").style.display = "block";
+                loadAdmin();
+            } else {
+                alert("❌ Неверный пароль");
             }
         }
+
+        // === Отображение сообщений для админа ===
+        function loadAdmin() {
+            load();
+            const container = document.getElementById("list");
+            container.innerHTML = "";
+
+            if (messages.length === 0) {
+                container.innerHTML = "<p>Пока нет сообщений...</p>";
+                return;
+            }
+
+            // Новые сверху
+            messages.slice().reverse().forEach(msg => {
+                const div = document.createElement("div");
+                div.className = "msg";
+                div.id = "msg-" + msg.id;
+
+                let content = `
+                    <div><strong>💬</strong> ${msg.text}</div>
+                    <div class="time">🕒 ${msg.time}</div>
+                `;
+
+                if (msg.replied) {
+                    content += `
+                        <div class="reply-box">
+                            <strong>📌 Вы:</strong> ${msg.reply}
+                        </div>
+                    `;
+                } else {
+                    content += `
+                        <div class="reply-area">
+                            <textarea class="reply-text" id="reply_${msg.id}" placeholder="Ответ..."></textarea>
+                            <button class="blue" onclick="reply(${msg.id})">Ответить</button>
+                            <button class="red" onclick="deleteMsg(${msg.id})">Удалить</button>
+                        </div>
+                    `;
+                }
+
+                div.innerHTML = content;
+                container.appendChild(div);
+            });
+        }
+
+        // === Ответ ===
+        function reply(id) {
+            const input = document.getElementById(`reply_${id}`);
+            const text = input.value.trim();
+            if (!text) {
+                alert("Введите ответ");
+                return;
+            }
+
+            load();
+            const msg = messages.find(m => m.id == id);
+            if (msg) {
+                msg.replied = true;
+                msg.reply = text;
+                save();
+            }
+
+            loadAdmin(); // обновляем
+        }
+
+        // === Удаление ===
+        function deleteMsg(id) {
+            if (!confirm("Удалить сообщение?")) return;
+
+            load();
+            messages = messages.filter(m => m.id != id);
+            save();
+
+            loadAdmin(); // обновляем
+        }
+
+        // Обновляем админку каждые 5 секунд
+        setInterval(() => {
+            if (document.getElementById("admin-mode").style.display === "block") {
+                loadAdmin();
+            }
+        }, 5000);
+
+        // Первая загрузка
+        load();
+
     </script>
 </body>
 </html>
