@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
     <title>Написать мне</title>
@@ -8,23 +8,24 @@
             font-family: Arial, sans-serif;
             text-align: center;
             padding: 40px;
-            background: #f0f8ff;
+            background: #f9f9f9;
             margin: 0;
         }
         h1 {
-            color: #2c3e50;
+            color: #333;
         }
         textarea {
             width: 80%;
-            height: 100px;
+            height: 120px;
             padding: 12px;
             margin: 15px 0;
-            border: 2px solid #3498db;
-            border-radius: 8px;
+            border: 2px solid #4285f4;
+            border-radius: 10px;
             font-size: 16px;
+            font-family: inherit;
         }
         button {
-            background: #3498db;
+            background: #4285f4;
             color: white;
             padding: 12px 30px;
             font-size: 18px;
@@ -33,78 +34,57 @@
             cursor: pointer;
         }
         button:hover {
-            background: #2980b9;
+            background: #3367d6;
         }
-        #reply {
-            margin: 30px auto;
-            padding: 20px;
-            background: #d4edda;
-            border: 2px solid #28a745;
-            width: 80%;
-            border-radius: 8px;
+        #status {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #333;
             display: none;
-        }
-        #text {
-            font-size: 18px;
-            color: #155724;
         }
     </style>
 </head>
 <body>
     <h1>📬 Напиши мне</h1>
-    <p>Я получу твоё сообщение и обязательно отвечу!</p>
-
-    <textarea id="msg" placeholder="Ваше сообщение..."></textarea><br>
-    <button onclick="send()">Отправить</button>
-
-    <div id="reply" style="display:none;">
-        <h3>✅ Ответ:</h3>
-        <p id="text"></p>
-    </div>
+    <p>Я отвечу как можно скорее!</p>
+    <textarea id="msg" placeholder="Твоё сообщение..."></textarea><br>
+    <button onclick="sendMessage()">Отправить</button>
+    <div id="status">✅ Сообщение отправлено!</div>
 
     <script>
-        function send() {
+        function sendMessage() {
             const text = document.getElementById("msg").value.trim();
             if (!text) {
-                alert("Напишите сообщение");
+                alert("Напишите что-нибудь!");
                 return;
             }
 
-            const id = Date.now();
-            localStorage.setItem("last_msg_id", id);
+            try {
+                const messages = JSON.parse(localStorage.getItem("messages") || "[]");
+                const newMessage = {
+                    id: Date.now(), // уникальный ID
+                    text: text,
+                    time: new Date().toLocaleString("ru-RU"),
+                    replied: false
+                };
 
-            const message = {
-                id: id,
-                text: text,
-                time: new Date().toLocaleString(),
-                replied: false
-            };
+                messages.push(newMessage);
+                localStorage.setItem("messages", JSON.stringify(messages));
 
-            const messages = JSON.parse(localStorage.getItem("messages") || "[]");
-            messages.push(message);
-            localStorage.setItem("messages", JSON.stringify(messages));
+                // Показываем статус
+                document.getElementById("status").style.display = "block";
+                document.getElementById("msg").value = "";
 
-            alert("Сообщение отправлено! Спасибо 💬");
-            document.getElementById("msg").value = "";
-            checkReply();
-        }
+                // Скрываем через 3 секунды
+                setTimeout(() => {
+                    document.getElementById("status").style.display = "none";
+                }, 3000);
 
-        function checkReply() {
-            const id = localStorage.getItem("last_msg_id");
-            if (!id) return;
-
-            const messages = JSON.parse(localStorage.getItem("messages") || "[]");
-            const msg = messages.find(m => m.id == parseInt(id));
-
-            const replyDiv = document.getElementById("reply");
-            if (msg && msg.replied && msg.reply) {
-                document.getElementById("text").textContent = msg.reply;
-                replyDiv.style.display = "block";
+            } catch (e) {
+                alert("Ошибка: не удалось сохранить сообщение.");
+                console.error(e);
             }
         }
-
-        setInterval(checkReply, 1000);
-        checkReply();
     </script>
 </body>
 </html>
